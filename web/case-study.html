@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentShield Case Study</title>
+<meta name="description" content="How AgentShield measures prompt-injection risk in tool-using AI agents, and which defenses actually reduce it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-row">
+    <a class="brand" href="/">Agent<span>Shield</span></a>
+    <nav>
+      <a href="/">Live demo</a>
+      <a href="/api/docs">API</a>
+      <a href="https://github.com/MuhammadSaeedAnwar/AgentShield" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap doc">
+  <section class="hero hero-flush">
+    <p class="eyebrow">Case study</p>
+    <h1>Measuring prompt-injection risk in AI agents that can send email, read files and query databases</h1>
+    <p class="lead">AgentShield is an open-source evaluation harness I built to answer one practical question: if untrusted text reaches an AI agent, does the agent misuse its tools, and which defenses actually stop it?</p>
+  </section>
+
+  <div class="kpis">
+    <div class="kpi"><b>9/30 to 0/30</b><span>attacks succeeding, no defenses vs all five defenses (simulated agent)</span></div>
+    <div class="kpi"><b>30/30</b><span>benign tasks still completed with all defenses on</span></div>
+    <div class="kpi"><b>89</b><span>automated tests in the core harness, plus API tests for this demo</span></div>
+  </div>
+
+  <h2>The problem</h2>
+  <p>Teams are wiring language models to real tools: email, file storage, CRMs and internal databases. The risk is not a rude chatbot reply. It is an agent that reads a web page, a support ticket or a retrieved document containing hidden instructions, and then quietly sends customer data to an outside address or calls a tool it was never meant to use.</p>
+  <p>Most evidence on this is either a one-off exploit demo or a vendor claim that a guardrail "works". Neither tells a team how often their setup fails, or which control to fix first.</p>
+
+  <h2>What I built</h2>
+  <ul>
+    <li><strong>30 attack cases in 6 categories:</strong> direct prompt injection, indirect injection, RAG (retrieved document) injection, tool-output injection, multi-turn manipulation and unauthorized tool use. Each case has a deployer policy, an attacker payload, an expected safe behaviour and machine-checkable success criteria.</li>
+    <li><strong>A simulated tool environment</strong> with messaging, file, database, document-search, calculator and weather tools. Nothing leaves the sandbox: "sent" messages go to an in-memory outbox, files and tables are fake, secrets are canary strings.</li>
+    <li><strong>Five composable defenses:</strong> input sanitization, trust-boundary separation, tool authorization against a policy, user confirmation for sensitive actions, and output validation (an egress filter for secrets).</li>
+    <li><strong>Rule-based scoring, not an LLM judge.</strong> Every episode is classified from what the agent actually did, and every rate is reported with its numerator, denominator and a 95% Wilson interval.</li>
+    <li><strong>An adapter for any OpenAI-compatible endpoint,</strong> so the same cases can be run against a real model or a client's staging agent.</li>
+  </ul>
+
+  <h2>Results on the simulated agent</h2>
+  <p>The numbers below come from the deterministic mock agent shipped with the project, which is deliberately easy to fool. They describe how the harness and defenses behave, not how any commercial model behaves. You can reproduce every number on the <a href="/">live demo</a>.</p>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th>Condition</th><th>Attacks succeeded</th><th>Secret exposed</th><th>Unauthorized tool call</th><th>Benign task done</th></tr></thead>
+      <tbody>
+        <tr><td>No defenses</td><td>9/30</td><td>9/25</td><td>8/30</td><td>30/30</td></tr>
+        <tr><td>Sanitization only</td><td>4/30</td><td>4/25</td><td>4/30</td><td>30/30</td></tr>
+        <tr><td>Separation only</td><td>4/30</td><td>4/25</td><td>4/30</td><td>30/30</td></tr>
+        <tr><td>Authorization only</td><td>1/30</td><td>1/25</td><td>8/30 attempted, 8 blocked</td><td>30/30</td></tr>
+        <tr><td>Confirmation only</td><td>8/30</td><td>9/25</td><td>8/30</td><td>30/30</td></tr>
+        <tr><td>Output validation only</td><td>7/30</td><td>3/25</td><td>8/30</td><td>30/30</td></tr>
+        <tr><td>All five</td><td>0/30</td><td>0/25</td><td>2/30 attempted, 2 blocked</td><td>30/30</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>What this shows</h3>
+  <ul>
+    <li><strong>Enforcing policy at the tool layer did the most work.</strong> Authorization alone cut successful attacks from 9 to 1 because it blocks the dangerous call even when the model has been fooled.</li>
+    <li><strong>Prompt-level defenses help but leak.</strong> Sanitization and separation each stopped about half of the successful attacks. Attacks that do not match a known pattern still get through.</li>
+    <li><strong>Layering matters.</strong> No single defense reached zero; all five together did, without breaking any benign task.</li>
+    <li><strong>Small sample, wide intervals.</strong> With 30 cases, 0/30 still has a 95% interval up to about 11%. These are indicative results, not proof of safety.</li>
+  </ul>
+
+  <h2>Engineering</h2>
+  <ul>
+    <li>Core engine uses only the Python standard library, so a reproduction run cannot break on a dependency update.</li>
+    <li>This demo is a FastAPI service with request validation (strict schemas, allowlisted defense names, case-id pattern, 4 KB body limit), JSON error responses, and security headers (CSP, no framing, no sniffing).</li>
+    <li>The frontend renders attack payloads as plain text only, so payloads in the dataset can never run in the browser.</li>
+    <li>No API keys, no outbound calls, no user data stored.</li>
+  </ul>
+
+  <h2>Limitations</h2>
+  <ul>
+    <li>The mock agent is a simulator. Real models fail in less predictable ways, which is why the harness also supports real endpoints.</li>
+    <li>30 cases is a small dataset. Pattern-based defenses can look better here than against a determined attacker.</li>
+    <li>Giving the mock agent every tool (over-provisioning) made no difference in these runs, because its behaviour is driven by the payload. A real model may behave differently.</li>
+  </ul>
+
+  <h2 id="service">Testing your agent</h2>
+  <p>If you are building an AI agent that can read untrusted content and take actions, I can run this kind of assessment against your staging setup:</p>
+  <ol>
+    <li>Map the agent's tools, data sources and what it must never do.</li>
+    <li>Adapt the attack cases to your tools and policies, and add cases specific to your product.</li>
+    <li>Run them against your staging endpoint (OpenAI-compatible APIs are supported out of the box), with and without your current guardrails.</li>
+    <li>Deliver a short report: what got through, the exact traces, which control would have stopped each one, and a retest after fixes.</li>
+  </ol>
+  <p>Contact: <a href="mailto:malik.saed555@gmail.com">malik.saed555@gmail.com</a> | <a href="https://www.linkedin.com/in/muhammadsaeedanwar" rel="noopener">LinkedIn</a> | <a href="https://github.com/MuhammadSaeedAnwar" rel="noopener">GitHub</a></p>
+  <p class="small">About me: AI security researcher; first-author paper on prompt injection accepted at AISEC 2026 (International Conference on Artificial Intelligence &amp; Cybersecurity, Marrakech). I test only systems I am authorized to test.</p>
+</main>
+
+<footer class="wrap foot"><p><a href="/">Back to the live demo</a></p></footer>
+</body>
+</html>

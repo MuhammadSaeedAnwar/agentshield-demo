@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgentShield Demo</title>
+<meta name="description" content="Run prompt-injection attacks against a simulated tool-using AI agent and see which defenses stop them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap top-row">
+    <a class="brand" href="/">Agent<span>Shield</span></a>
+    <nav>
+      <a href="/case-study">Case study</a>
+      <a href="/api/docs">API</a>
+      <a href="https://github.com/MuhammadSaeedAnwar/AgentShield" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <p class="eyebrow">Prompt-injection testing for tool-using AI agents</p>
+    <h1>Can a hidden instruction make your AI agent leak data?</h1>
+    <p class="lead">Pick an attack, choose defenses, and watch the same agent run twice: once unprotected, once defended. Every tool call, policy violation and leaked secret is shown.</p>
+    <p class="note"><strong>What runs here:</strong> a deterministic, deliberately gullible mock agent with simulated email, file and database tools. Nothing is sent anywhere and no real model is called. Results describe the harness and the defenses, not any commercial LLM.</p>
+  </section>
+
+  <section class="wrap panel" aria-labelledby="run-h">
+    <h2 id="run-h">1. Run one attack</h2>
+    <div class="controls">
+      <label class="field">Attack case
+        <select id="case-select" aria-label="Attack case"><option>Loading...</option></select>
+      </label>
+      <fieldset class="field">
+        <legend>Defenses</legend>
+        <div id="defense-list" class="chips"></div>
+      </fieldset>
+      <label class="field">Tool access
+        <select id="provisioning">
+          <option value="minimal">Only the tools the task needs</option>
+          <option value="full">All tools (over-provisioned)</option>
+        </select>
+      </label>
+      <button id="run-btn" class="btn" type="button">Run attack</button>
+    </div>
+    <p id="run-error" class="error" role="alert" hidden></p>
+
+    <div id="case-info" class="case" hidden>
+      <div class="case-head">
+        <span id="ci-id" class="tag mono"></span>
+        <span id="ci-cat" class="tag"></span>
+        <span id="ci-sev" class="tag"></span>
+        <span id="ci-chan" class="tag"></span>
+      </div>
+      <h3 id="ci-title"></h3>
+      <div class="grid2">
+        <div><p class="label">Deployer policy (trusted)</p><pre id="ci-policy"></pre></div>
+        <div><p class="label">Attacker payload (untrusted)</p><pre id="ci-payload" class="bad"></pre></div>
+      </div>
+      <p class="label">Expected safe behaviour</p>
+      <p id="ci-safe"></p>
+    </div>
+
+    <div id="results" class="grid2 results" hidden>
+      <article class="run" id="run-baseline"></article>
+      <article class="run" id="run-defended"></article>
+    </div>
+  </section>
+
+  <section class="wrap panel" aria-labelledby="bench-h">
+    <h2 id="bench-h">2. Run the full benchmark</h2>
+    <p>Runs all 30 cases (6 categories) with no defenses and with the defenses selected above. Every rate shows its count and a 95% Wilson interval.</p>
+    <button id="bench-btn" class="btn" type="button">Run all 30 cases</button>
+    <p id="bench-error" class="error" role="alert" hidden></p>
+    <div id="bench" hidden>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Metric</th><th>No defenses</th><th id="bench-def-h">Defended</th></tr></thead>
+          <tbody id="bench-body"></tbody>
+        </table>
+      </div>
+      <h3>Attack success rate by category</h3>
+      <div id="bench-cats" class="bars"></div>
+      <p class="small" id="bench-meta"></p>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap foot">
+  <p>Built by <a href="https://saeed-research-profile-cyberxai.vercel.app/" rel="noopener">Muhammad Saeed Anwar</a>, AI security researcher. AgentShield is open source (MIT). Need your own agent tested? <a href="/case-study#service">See how an assessment works</a>.</p>
+</footer>
+<script src="/static/app.js" defer></script>
+</body>
+</html>
