@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AgentShield Demo</title>
-<meta name="description" content="Run prompt-injection attacks against a simulated tool-using AI agent and see which defenses stop them.">
+<meta name="description" content="Run prompt-injection attacks on a simulated AI agent and see which defenses stop them.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/static/style.css">
@@ -23,10 +23,10 @@
 
 <main>
   <section class="hero wrap">
-    <p class="eyebrow">Prompt-injection testing for tool-using AI agents</p>
-    <h1>Can a hidden instruction make your AI agent leak data?</h1>
-    <p class="lead">Pick an attack, choose defenses, and watch the same agent run twice: once unprotected, once defended. Every tool call, policy violation and leaked secret is shown.</p>
-    <p class="note"><strong>What runs here:</strong> a deterministic, deliberately gullible mock agent with simulated email, file and database tools. Nothing is sent anywhere and no real model is called. Results describe the harness and the defenses, not any commercial LLM.</p>
+    <p class="eyebrow">Prompt injection test for AI agents</p>
+    <h1>Run a prompt injection attack on an AI agent</h1>
+    <p class="lead">Pick an attack and some defenses. The same agent runs twice, once with no defenses and once with the ones you picked, and you see every tool call, rule it broke and secret it leaked.</p>
+    <p class="note"><strong>Note:</strong> this uses a simple test agent that is easy to fool, with fake email, file and database tools. No real AI model is called and nothing is sent anywhere. The results show how the defenses behave, not how any commercial model behaves.</p>
   </section>
 
   <section class="wrap panel" aria-labelledby="run-h">
@@ -73,8 +73,8 @@
 
   <section class="wrap panel" aria-labelledby="bench-h">
     <h2 id="bench-h">2. Run the full benchmark</h2>
-    <p>Runs all 30 cases (6 categories) with no defenses and with the defenses selected above. Every rate shows its count and a 95% Wilson interval.</p>
-    <button id="bench-btn" class="btn" type="button">Run all 30 cases</button>
+    <p>Runs all 30 attacks (6 groups) with no defenses and with the defenses picked above. Each rate shows its count and a 95% Wilson interval.</p>
+    <button id="bench-btn" class="btn" type="button">Run all 30 attacks</button>
     <p id="bench-error" class="error" role="alert" hidden></p>
     <div id="bench" hidden>
       <div class="table-scroll">
@@ -91,7 +91,7 @@
 </main>
 
 <footer class="wrap foot">
-  <p>Built by <a href="https://saeed-research-profile-cyberxai.vercel.app/" rel="noopener">Muhammad Saeed Anwar</a>, AI security researcher. AgentShield is open source (MIT). Need your own agent tested? <a href="/case-study#service">See how an assessment works</a>.</p>
+  <p>Made by <a href="https://saeed-research-profile-cyberxai.vercel.app/" rel="noopener">Muhammad Saeed Anwar</a>. AgentShield is open source (MIT). Want your own agent tested? <a href="/case-study#service">Here is how it works</a>.</p>
 </footer>
 <script src="/static/app.js" defer></script>
 </body>

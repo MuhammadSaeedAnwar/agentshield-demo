@@ -14,18 +14,18 @@ const pct = (m) => (m && m.percent !== null && m.percent !== undefined ? m.perce
 
 const OUTCOME = {
   attack_success: ["Attack succeeded", "bad"],
-  safe_completion: ["Attack stopped, task done", "good"],
-  safe_incomplete: ["Attack stopped, task not done", "good"],
+  safe_completion: ["Attack blocked, task done", "good"],
+  safe_incomplete: ["Attack blocked, task not done", "good"],
   not_applicable: ["Not applicable", "neutral"],
   error: ["Error", "neutral"],
 };
 const METRIC_LABELS = {
-  attack_success_rate: "Attack success rate (lower is better)",
-  safe_completion_rate: "Safe completion rate",
-  unauthorized_tool_call_rate: "Episodes with an unauthorized tool call",
-  sensitive_information_exposure_rate: "Secret exposed",
-  task_completion_rate: "Benign task still completed",
-  blocked_call_rate: "Tool calls blocked by a defense",
+  attack_success_rate: "Attacks that succeeded",
+  safe_completion_rate: "Blocked and task done",
+  unauthorized_tool_call_rate: "Runs with an out-of-policy tool call",
+  sensitive_information_exposure_rate: "Secret leaked",
+  task_completion_rate: "Normal task still done",
+  blocked_call_rate: "Runs where a defense blocked a call",
 };
 
 async function api(path, body) {
@@ -108,10 +108,10 @@ function renderRun(node, title, r) {
   const fact = (k, v) => { const li = el("li"); li.appendChild(el("b", null, k + ": ")); li.appendChild(document.createTextNode(v)); facts.appendChild(li); };
   fact("Defenses", r.defenses.length ? r.defenses.map(pretty).join(", ") : "none");
   fact("Secrets exposed", r.signals.exposed_secrets && r.signals.exposed_secrets.length ? r.signals.exposed_secrets.join(", ") : "none");
-  fact("Sent outside the org", r.signals.external_recipients && r.signals.external_recipients.length ? r.signals.external_recipients.join(", ") : "nothing");
+  fact("Sent outside the company", r.signals.external_recipients && r.signals.external_recipients.length ? r.signals.external_recipients.join(", ") : "nothing");
   fact("Injection reached the model", r.signals.injection_reached_model ? "yes" : "no");
   if (r.signals.defense_interventions && r.signals.defense_interventions.length) fact("Defenses that acted", r.signals.defense_interventions.map(pretty).join(", "));
-  fact("Benign task completed", r.task_completed ? "yes" : "no");
+  fact("Normal task done", r.task_completed ? "yes" : "no");
   node.appendChild(facts);
 
   node.appendChild(el("p", "label", "Agent trace"));
@@ -179,7 +179,7 @@ async function runBench() {
   const btn = $("bench-btn");
   showError("bench-error", "");
   btn.disabled = true;
-  btn.textContent = "Running 60 episodes...";
+  btn.textContent = "Running...";
   try {
     const d = await api("/api/benchmark", { defenses: selectedDefenses(), tool_provisioning: $("provisioning").value });
     $("bench-def-h").textContent = d.defended.defenses.length ? "Defended: " + d.defended.defenses.map(pretty).join(", ") : "Defended (no defenses chosen)";
@@ -219,13 +219,13 @@ async function runBench() {
       row.appendChild(pair);
       cats.appendChild(row);
     });
-    $("bench-meta").textContent = d.cases + " cases x 2 conditions, model " + d.model + ", tool access: " + d.tool_provisioning + ", computed in " + d.elapsed_ms + " ms on the server.";
+    $("bench-meta").textContent = d.cases + " attacks, run twice each. Test agent: " + d.model + ". Tool access: " + d.tool_provisioning + ". Took " + d.elapsed_ms + " ms.";
     $("bench").hidden = false;
   } catch (e) {
     showError("bench-error", e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Run all 30 cases";
+    btn.textContent = "Run all 30 attacks";
   }
 }
 
