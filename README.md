@@ -1,12 +1,12 @@
 # AgentShield Web Demo
 
-Live, browser-based demo of [AgentShield](https://github.com/MuhammadSaeedAnwar/AgentShield): run prompt-injection attack cases against a simulated tool-using AI agent, with and without defenses, and see every tool call, policy violation and leaked secret.
+A web demo of [AgentShield](https://github.com/MuhammadSaeedAnwar/AgentShield). You pick a prompt injection attack and some defenses, and the same test agent runs with and without them. The page shows every tool call, rule broken and secret leaked.
 
-- **Live demo:** LIVE_URL
-- **Case study:** LIVE_URL/case-study
-- **API docs:** LIVE_URL/api/docs
+- **Live demo:** https://agentshield-demo-wine.vercel.app
+- **Case study:** https://agentshield-demo-wine.vercel.app/case-study
+- **API docs:** https://agentshield-demo-wine.vercel.app/api/docs
 
-> The demo runs AgentShield's deterministic mock agent only. No real model is called, no API key is used, and email, files and databases are simulated in memory. Results describe the harness and the defenses, not any commercial LLM.
+> The demo only uses AgentShield's mock agent, which is easy to fool on purpose. No real model is called, no API key is used, and email, files and databases are fake. The results show how the defenses behave, not how any commercial model behaves.
 
 ## Screenshots
 
