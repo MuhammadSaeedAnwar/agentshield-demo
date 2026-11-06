@@ -49,8 +49,8 @@ app = FastAPI(
 
 # --------------------------------------------------------------------------- security
 CSP = (
-    "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; "
-    "font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; "
+    "default-src 'self'; script-src 'self'; style-src 'self'; "
+    "img-src 'self' data:; connect-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 )
 
