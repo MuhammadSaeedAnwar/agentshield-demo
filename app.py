@@ -50,7 +50,7 @@ app = FastAPI(
 # --------------------------------------------------------------------------- security
 CSP = (
     "default-src 'self'; script-src 'self'; style-src 'self'; "
-    "img-src 'self' data:; connect-src 'self'; "
+    "img-src 'self' data:; font-src 'self'; connect-src 'self'; "
     "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
 )
 
@@ -241,13 +241,26 @@ def case_study() -> HTMLResponse:
 
 @app.get("/static/{name}", include_in_schema=False)
 def static(name: str):
-    allowed = {"app.js": "text/javascript", "style.css": "text/css"}
-    if name not in allowed:
-        raise HTTPException(status_code=404, detail="not found")
     from fastapi.responses import Response
 
-    return Response((WEB_DIR / name).read_text(encoding="utf-8"), media_type=allowed[name],
-                    headers={"Cache-Control": "public, max-age=300"})
+    text = {"app.js": "text/javascript", "style.css": "text/css"}
+    if name in text:
+        return Response((WEB_DIR / name).read_text(encoding="utf-8"), media_type=text[name],
+                        headers={"Cache-Control": "public, max-age=300"})
+    raise HTTPException(status_code=404, detail="not found")
+
+
+FONTS = {"inter.woff2", "jbmono-400.woff2", "jbmono-500.woff2"}
+
+
+@app.get("/static/fonts/{name}", include_in_schema=False)
+def font(name: str):
+    from fastapi.responses import Response
+
+    if name not in FONTS:
+        raise HTTPException(status_code=404, detail="not found")
+    return Response((WEB_DIR / "fonts" / name).read_bytes(), media_type="font/woff2",
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 @app.get("/api/health")
