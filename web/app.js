@@ -10,225 +10,270 @@ const el = (tag, cls, text) => {
   return n;
 };
 const pretty = (s) => String(s || "").replace(/_/g, " ");
-const pct = (m) => (m && m.percent !== null && m.percent !== undefined ? m.percent.toFixed(1) + "%" : "n/a");
+const NAMES = { rag_injection: "RAG injection", multi_turn_manipulation: "Multi-turn manipulation", output_validation: "Output validation" };
+const cap = (s) => { if (NAMES[s]) return NAMES[s]; s = pretty(s); return s.charAt(0).toUpperCase() + s.slice(1); };
+const pct = (m) => (m && m.percent !== null && m.percent !== undefined ? m.percent.toFixed(0) + "%" : "n/a");
 
 const OUTCOME = {
   attack_success: ["Attack succeeded", "bad"],
-  safe_completion: ["Attack blocked, task done", "good"],
-  safe_incomplete: ["Attack blocked, task not done", "good"],
+  safe_completion: ["Blocked, task done", "good"],
+  safe_incomplete: ["Blocked, task not done", "good"],
   not_applicable: ["Not applicable", "neutral"],
   error: ["Error", "neutral"],
 };
-const METRIC_LABELS = {
-  attack_success_rate: "Attacks that succeeded",
-  safe_completion_rate: "Blocked and task done",
-  unauthorized_tool_call_rate: "Runs with an out-of-policy tool call",
-  sensitive_information_exposure_rate: "Secret leaked",
-  task_completion_rate: "Normal task still done",
-  blocked_call_rate: "Runs where a defense blocked a call",
-};
+const METRICS = [
+  ["attack_success_rate", "Attacks that succeeded"],
+  ["sensitive_information_exposure_rate", "Secret leaked"],
+  ["unauthorized_tool_call_rate", "Out-of-policy tool call made"],
+  ["blocked_call_rate", "A defense blocked a call"],
+  ["task_completion_rate", "Normal task still done"],
+];
+
+let CASES = [];
+let selected = "A-02";
 
 async function api(path, body) {
   const opts = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
   let res;
-  try {
-    res = await fetch(path, opts);
-  } catch (e) {
-    throw new Error("Network error. Check your connection and try again.");
-  }
+  try { res = await fetch(path, opts); } catch (e) { throw new Error("Network error. Check your connection and try again."); }
   let data = null;
-  try { data = await res.json(); } catch (e) { /* non-JSON */ }
+  try { data = await res.json(); } catch (e) { /* not JSON */ }
   if (!res.ok) {
     const detail = data && data.details ? data.details.map((d) => d.field + ": " + d.message).join("; ") : "";
-    throw new Error((data && data.error ? data.error : "Request failed (" + res.status + ")") + (detail ? " - " + detail : ""));
+    throw new Error((data && data.error ? data.error : "Request failed (" + res.status + ")") + (detail ? ". " + detail : ""));
   }
   return data;
 }
 
-function showError(id, msg) { const n = $(id); n.textContent = msg; n.hidden = !msg; }
-function selectedDefenses() { return [...document.querySelectorAll("#defense-list input:checked")].map((i) => i.value); }
+function showError(msg) { const n = $("error"); n.textContent = msg || ""; n.hidden = !msg; }
+const defenses = () => [...document.querySelectorAll("#defense-list input:checked")].map((i) => i.value);
+const provisioning = () => document.querySelector("input[name=prov]:checked").value;
+
+/* ---------- case list ---------- */
+function renderCaseList() {
+  const q = $("case-filter").value.trim().toLowerCase();
+  const list = $("case-list");
+  list.textContent = "";
+  let shown = 0;
+  let lastCat = null;
+  CASES.forEach((c) => {
+    const hay = (c.id + " " + c.title + " " + c.category).toLowerCase();
+    if (q && !hay.includes(q)) return;
+    if (c.category !== lastCat) { list.appendChild(el("div", "case-group", cap(c.category))); lastCat = c.category; }
+    const b = el("button", "case-opt");
+    b.type = "button";
+    b.setAttribute("role", "option");
+    b.setAttribute("aria-selected", String(c.id === selected));
+    b.dataset.id = c.id;
+    b.appendChild(el("span", "cid", c.id));
+    b.appendChild(el("span", "ctitle", c.title));
+    b.addEventListener("click", () => { selected = c.id; renderCaseList(); });
+    b.addEventListener("dblclick", runOne);
+    list.appendChild(b);
+    shown++;
+  });
+  $("case-count").textContent = shown + " of " + CASES.length;
+}
 
 async function init() {
   try {
-    const [cases, defenses] = await Promise.all([api("/api/cases"), api("/api/defenses")]);
-    const sel = $("case-select");
-    sel.textContent = "";
-    const groups = {};
-    cases.cases.forEach((c) => {
-      if (!groups[c.category]) {
-        groups[c.category] = el("optgroup");
-        groups[c.category].label = pretty(c.category);
-        sel.appendChild(groups[c.category]);
-      }
-      const o = el("option", null, c.id + "  " + c.title);
-      o.value = c.id;
-      groups[c.category].appendChild(o);
-    });
-    const start = cases.cases.find((c) => c.id === "A-02");
-    if (start) sel.value = start.id;
-
-    const list = $("defense-list");
-    defenses.defenses.forEach((d) => {
-      const lab = el("label", "chip");
-      lab.title = d.description;
-      const box = el("input");
-      box.type = "checkbox";
-      box.value = d.name;
-      box.checked = d.name === "authorization" || d.name === "sanitization";
-      lab.appendChild(box);
-      lab.appendChild(document.createTextNode(pretty(d.name)));
-      list.appendChild(lab);
+    const [cases, defs] = await Promise.all([api("/api/cases"), api("/api/defenses")]);
+    CASES = cases.cases;
+    renderCaseList();
+    const box = $("defense-list");
+    defs.defenses.forEach((d) => {
+      const lab = el("label", "check");
+      const inp = el("input");
+      inp.type = "checkbox";
+      inp.value = d.name;
+      inp.checked = d.name === "sanitization" || d.name === "authorization";
+      lab.appendChild(inp);
+      const txt = el("span");
+      txt.appendChild(el("span", "check-name", cap(d.name)));
+      txt.appendChild(el("span", "check-desc", d.description));
+      lab.appendChild(txt);
+      box.appendChild(lab);
     });
   } catch (e) {
-    showError("run-error", "Could not load the demo data: " + e.message);
+    showError("Could not load the test data. " + e.message);
   }
 }
 
+/* ---------- single run ---------- */
 function renderCase(c) {
   $("ci-id").textContent = c.id;
-  $("ci-cat").textContent = pretty(c.category);
+  $("ci-cat").textContent = cap(c.category);
   const sev = $("ci-sev");
-  sev.textContent = "severity: " + c.severity;
-  sev.className = "tag sev-" + c.severity;
-  $("ci-chan").textContent = "enters via: " + pretty(c.injection_channel);
+  sev.textContent = c.severity;
+  sev.className = "sev sev-" + c.severity;
   $("ci-title").textContent = c.title;
   $("ci-policy").textContent = c.trusted_instruction;
-  $("ci-payload").textContent = c.attack_prompt;
+  $("ci-chan").textContent = cap(c.injection_channel);
   $("ci-safe").textContent = c.expected_safe_behavior;
-  $("case-info").hidden = false;
+  $("ci-payload").textContent = c.attack_prompt;
 }
 
 function renderRun(node, title, r) {
   node.textContent = "";
-  node.appendChild(el("h4", null, title));
-  const [label, tone] = OUTCOME[r.outcome] || [pretty(r.outcome), "neutral"];
-  node.appendChild(el("span", "verdict " + tone, label));
+  const [label, tone] = OUTCOME[r.outcome] || [cap(r.outcome), "neutral"];
+  const head = el("div", "run-head");
+  head.appendChild(el("h3", null, title));
+  head.appendChild(el("span", "verdict " + tone, label));
+  node.appendChild(head);
 
-  const facts = el("ul", "facts");
-  const fact = (k, v) => { const li = el("li"); li.appendChild(el("b", null, k + ": ")); li.appendChild(document.createTextNode(v)); facts.appendChild(li); };
-  fact("Defenses", r.defenses.length ? r.defenses.map(pretty).join(", ") : "none");
-  fact("Secrets exposed", r.signals.exposed_secrets && r.signals.exposed_secrets.length ? r.signals.exposed_secrets.join(", ") : "none");
-  fact("Sent outside the company", r.signals.external_recipients && r.signals.external_recipients.length ? r.signals.external_recipients.join(", ") : "nothing");
-  fact("Injection reached the model", r.signals.injection_reached_model ? "yes" : "no");
-  if (r.signals.defense_interventions && r.signals.defense_interventions.length) fact("Defenses that acted", r.signals.defense_interventions.map(pretty).join(", "));
-  fact("Normal task done", r.task_completed ? "yes" : "no");
-  node.appendChild(facts);
+  const kv = el("dl", "kv");
+  const row = (k, v, bad) => { kv.appendChild(el("dt", null, k)); kv.appendChild(el("dd", bad ? "bad" : null, v)); };
+  const secrets = r.signals.exposed_secrets || [];
+  const out = r.signals.external_recipients || [];
+  row("Defenses on", r.defenses.length ? r.defenses.map(cap).join(", ") : "None");
+  row("Secret leaked", secrets.length ? secrets.join(", ") : "No", secrets.length > 0);
+  row("Sent outside", out.length ? out.join(", ") : "Nothing", out.length > 0);
+  row("Injection reached model", r.signals.injection_reached_model ? "Yes" : "No");
+  if (r.signals.defense_interventions && r.signals.defense_interventions.length) row("Defenses that acted", r.signals.defense_interventions.map(cap).join(", "));
+  row("Normal task done", r.task_completed ? "Yes" : "No");
+  node.appendChild(kv);
 
-  node.appendChild(el("p", "label", "Agent trace"));
+  node.appendChild(el("p", "label", "What happened"));
   const trace = el("div", "trace");
+  const calls = r.tool_calls.slice();
   r.messages.forEach((m) => {
-    const box = el("div", "msg" + (m.trust === "untrusted" ? " untrusted" : ""));
+    const untrusted = m.trust === "untrusted";
+    const step = el("div", "step" + (untrusted ? " untrusted" : ""));
     const who = el("div", "who");
-    who.appendChild(el("span", null, m.role === "tool" ? "tool result: " + (m.name || "") : m.role));
-    who.appendChild(el("span", null, "[" + m.trust + "]"));
-    box.appendChild(who);
-    if (m.content) box.appendChild(el("div", "body", m.content));
-    (m.tool_calls || []).forEach((tc) => box.appendChild(el("div", "body", "calls " + tc.name + " " + JSON.stringify(tc.arguments))));
-    trace.appendChild(box);
+    who.appendChild(el("b", null, m.role === "tool" ? "Tool result · " + (m.name || "") : cap(m.role)));
+    if (untrusted) who.appendChild(el("span", "tag u", "untrusted"));
+    step.appendChild(who);
+    if (m.content) step.appendChild(el("div", "body", m.content));
+    (m.tool_calls || []).forEach((tc) => {
+      const call = calls.shift();
+      const s = el("div", "body", "→ " + tc.name + " " + JSON.stringify(tc.arguments));
+      step.appendChild(s);
+      if (call) {
+        if (call.blocked_by) { step.classList.add("blocked"); step.appendChild(el("div", "note good", "Blocked by " + pretty(call.blocked_by) + ". Never ran.")); }
+        else if (call.violations && call.violations.length) {
+          step.classList.add("bad");
+          call.violations.forEach((v) => step.appendChild(el("div", "note bad", "Broke policy: " + v.detail)));
+        }
+      }
+    });
+    trace.appendChild(step);
   });
   node.appendChild(trace);
+}
 
-  if (r.tool_calls.length) {
-    node.appendChild(el("p", "label", "Tool calls vs policy"));
-    const calls = el("div", "trace");
-    r.tool_calls.forEach((c) => {
-      const cls = c.blocked_by ? "call blocked" : c.violations.length ? "call violation" : "call";
-      const box = el("div", cls, c.tool + " " + JSON.stringify(c.arguments));
-      c.violations.forEach((v) => box.appendChild(el("span", "why", "policy violation: " + v.detail)));
-      if (c.blocked_by) box.appendChild(el("span", "blk", "blocked by " + pretty(c.blocked_by) + ", never executed"));
-      else if (c.violations.length) box.appendChild(el("span", "why", "executed anyway"));
-      calls.appendChild(box);
-    });
-    node.appendChild(calls);
-  }
+function setTab(which) {
+  const base = which === "base";
+  $("tab-base").setAttribute("aria-selected", String(base));
+  $("tab-def").setAttribute("aria-selected", String(!base));
+  $("run-baseline").dataset.hidden = String(!base);
+  $("run-defended").dataset.hidden = String(base);
+}
+
+function pill(id, r) {
+  const n = $(id);
+  const [label, tone] = OUTCOME[r.outcome] || ["", "neutral"];
+  n.textContent = tone === "bad" ? "leaked" : tone === "good" ? "blocked" : "";
+  n.className = "pill " + tone;
 }
 
 async function runOne() {
   const btn = $("run-btn");
-  showError("run-error", "");
+  showError("");
   btn.disabled = true;
-  btn.textContent = "Running...";
+  btn.textContent = "Running";
   try {
-    const data = await api("/api/run", {
-      case_id: $("case-select").value,
-      defenses: selectedDefenses(),
-      tool_provisioning: $("provisioning").value,
-    });
-    renderCase(data.case);
-    renderRun($("run-baseline"), "No defenses", data.baseline);
-    renderRun($("run-defended"), data.defended.defenses.length ? "With selected defenses" : "With selected defenses (none chosen)", data.defended);
-    $("results").hidden = false;
-    $("case-info").scrollIntoView({ behavior: "smooth", block: "start" });
+    const d = await api("/api/run", { case_id: selected, defenses: defenses(), tool_provisioning: provisioning() });
+    renderCase(d.case);
+    renderRun($("run-baseline"), "Without defenses", d.baseline);
+    renderRun($("run-defended"), "With defenses", d.defended);
+    pill("tb-base", d.baseline);
+    pill("tb-def", d.defended);
+    setTab("base");
+    $("empty").hidden = true;
+    $("bench").hidden = true;
+    $("single").hidden = false;
+    if (window.matchMedia("(max-width: 1000px)").matches) $("single").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (e) {
-    showError("run-error", e.message);
+    showError(e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = "Run attack";
   }
 }
 
-function metricCell(m) {
+/* ---------- benchmark ---------- */
+function cell(m) {
   const td = el("td");
   if (!m) { td.textContent = "n/a"; return td; }
-  td.appendChild(document.createTextNode(pct(m) + " (" + m.numerator + "/" + m.denominator + ")"));
-  td.appendChild(el("span", "ci", "95% CI " + (m.ci95_low * 100).toFixed(1) + " to " + (m.ci95_high * 100).toFixed(1)));
+  td.appendChild(el("span", "num", m.numerator + " / " + m.denominator));
+  td.appendChild(el("span", "ci", pct(m) + ", 95% CI " + (m.ci95_low * 100).toFixed(0) + " to " + (m.ci95_high * 100).toFixed(0) + "%"));
   return td;
 }
 
 async function runBench() {
   const btn = $("bench-btn");
-  showError("bench-error", "");
+  showError("");
   btn.disabled = true;
-  btn.textContent = "Running...";
+  btn.textContent = "Running";
   try {
-    const d = await api("/api/benchmark", { defenses: selectedDefenses(), tool_provisioning: $("provisioning").value });
-    $("bench-def-h").textContent = d.defended.defenses.length ? "Defended: " + d.defended.defenses.map(pretty).join(", ") : "Defended (no defenses chosen)";
+    const d = await api("/api/benchmark", { defenses: defenses(), tool_provisioning: provisioning() });
+    const on = d.defended.defenses;
+    $("bench-title").textContent = on.length ? "Without vs with " + on.map(pretty).join(", ") : "No defenses selected";
+    const sum = $("bench-summary");
+    sum.textContent = "";
+    const a = d.baseline.overall.attack_success_rate, b = d.defended.overall.attack_success_rate, t = d.defended.overall.task_completion_rate;
+    [["bad", a.numerator + " of " + a.denominator, "attacks got through without defenses"],
+     [b.numerator ? "bad" : "good", b.numerator + " of " + b.denominator, "got through with these defenses"],
+     [t.numerator === t.denominator ? "good" : "bad", t.numerator + " of " + t.denominator, "normal tasks still done"]].forEach(([cls, big, small]) => {
+      const box = el("div", cls); box.appendChild(el("b", null, big)); box.appendChild(el("span", null, small)); sum.appendChild(box);
+    });
     const body = $("bench-body");
     body.textContent = "";
-    Object.keys(METRIC_LABELS).forEach((k) => {
+    METRICS.forEach(([k, label]) => {
       const tr = el("tr");
-      tr.appendChild(el("td", null, METRIC_LABELS[k]));
-      tr.appendChild(metricCell(d.baseline.overall[k]));
-      tr.appendChild(metricCell(d.defended.overall[k]));
+      tr.appendChild(el("td", null, label));
+      tr.appendChild(cell(d.baseline.overall[k]));
+      tr.appendChild(cell(d.defended.overall[k]));
       body.appendChild(tr);
     });
     const cats = $("bench-cats");
     cats.textContent = "";
-    const legend = el("div", "legend");
-    legend.appendChild(el("span", "lb", "No defenses"));
-    legend.appendChild(el("span", "ld", "Defended"));
-    cats.appendChild(legend);
-    Object.keys(d.baseline.by_category).forEach((cat) => {
-      const row = el("div", "bar-row");
-      row.appendChild(el("div", null, pretty(cat)));
-      const pair = el("div", "bar-pair");
-      [["base", d.baseline.by_category[cat]], ["def", d.defended.by_category[cat]]].forEach(([cls, m]) => {
-        const line = el("div");
-        line.style.display = "grid";
-        line.style.gridTemplateColumns = "1fr 110px";
-        line.style.gap = "8px";
-        line.style.alignItems = "center";
-        const bar = el("div", "bar " + cls);
-        const fill = el("i");
-        fill.style.width = (m && m.percent ? m.percent : 0) + "%";
-        bar.appendChild(fill);
-        line.appendChild(bar);
-        line.appendChild(el("span", "bar-val", m ? pct(m) + " (" + m.numerator + "/" + m.denominator + ")" : "n/a"));
-        pair.appendChild(line);
+    const lg = el("div", "legend");
+    lg.appendChild(el("span", "lb", "Without"));
+    lg.appendChild(el("span", "ld", "With"));
+    cats.appendChild(lg);
+    Object.keys(d.baseline.by_category).forEach((c) => {
+      const r = el("div", "cat");
+      r.appendChild(el("span", null, cap(c)));
+      const bars = el("div", "cat-bars");
+      [["base", d.baseline.by_category[c]], ["def", d.defended.by_category[c]]].forEach(([cls, m]) => {
+        const line = el("div", "cat-line");
+        const t = el("div", "track " + cls);
+        const f = el("i");
+        f.style.width = (m && m.percent ? m.percent : 0) + "%";
+        t.appendChild(f);
+        line.appendChild(t);
+        line.appendChild(el("span", "cat-val", m ? m.numerator + " / " + m.denominator : "n/a"));
+        bars.appendChild(line);
       });
-      row.appendChild(pair);
-      cats.appendChild(row);
+      r.appendChild(bars);
+      cats.appendChild(r);
     });
-    $("bench-meta").textContent = d.cases + " attacks, run twice each. Test agent: " + d.model + ". Tool access: " + d.tool_provisioning + ". Took " + d.elapsed_ms + " ms.";
+    $("bench-meta").textContent = d.cases + " attacks, each run twice on " + d.model + " with " + (d.tool_provisioning === "full" ? "all tools" : "task tools only") + ". " + d.elapsed_ms + " ms.";
+    $("empty").hidden = true;
+    $("single").hidden = true;
     $("bench").hidden = false;
   } catch (e) {
-    showError("bench-error", e.message);
+    showError(e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = "Run all 30 attacks";
+    btn.textContent = "Run all 30";
   }
 }
 
+$("case-filter").addEventListener("input", renderCaseList);
 $("run-btn").addEventListener("click", runOne);
 $("bench-btn").addEventListener("click", runBench);
+$("tab-base").addEventListener("click", () => setTab("base"));
+$("tab-def").addEventListener("click", () => setTab("def"));
 init();

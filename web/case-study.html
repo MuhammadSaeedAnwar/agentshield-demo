@@ -3,27 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgentShield Case Study</title>
+<title>AgentShield · Case study</title>
 <meta name="description" content="How I test tool-using AI agents for prompt injection, and what the results show about common defenses.">
+<link rel="preload" href="/static/fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<header class="top">
-  <div class="wrap top-row">
-    <a class="brand" href="/">Agent<span>Shield</span></a>
-    <nav>
-      <a href="/">Live demo</a>
+<header class="bar">
+  <div class="bar-in">
+    <a class="mark" href="/" aria-label="AgentShield home"><span class="mark-glyph" aria-hidden="true"></span>AgentShield</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/">Test bench</a>
+      <a href="/case-study" aria-current="page">Case study</a>
       <a href="/api/docs">API</a>
       <a href="https://github.com/MuhammadSaeedAnwar/AgentShield" rel="noopener">GitHub</a>
     </nav>
   </div>
 </header>
 
-<main class="wrap doc">
-  <section class="hero hero-flush">
+<main class="doc">
+  <p class="kicker">Case study</p>
     <h1>Testing AI agents for prompt injection</h1>
     <p class="lead">AgentShield is an open-source test harness I wrote. It checks whether an AI agent with tools (email, files, a database) can be tricked by text it reads, and which defenses stop that.</p>
-  </section>
 
 
   <h2>Why I built it</h2>
@@ -41,9 +42,9 @@
   </ul>
 
   <h2>Results</h2>
-  <p>These numbers come from the mock agent included in the project. It is built to be easy to fool, so the numbers describe the defenses and the harness, not any commercial model. You can rerun all of them on the <a href="/">demo page</a>.</p>
-  <div class="table-scroll">
-    <table>
+  <p>These numbers come from the mock agent included in the project. It is built to be easy to fool, so the numbers describe the defenses and the harness, not any commercial model. You can rerun all of them on the <a href="/">test bench</a>.</p>
+  <div class="table-wrap">
+    <table class="tbl">
       <thead><tr><th>Defenses</th><th>Attacks succeeded</th><th>Secret exposed</th><th>Out-of-policy tool calls</th><th>Normal task done</th></tr></thead>
       <tbody>
         <tr><td>None</td><td>9/30</td><td>9/25</td><td>8/30</td><td>30/30</td></tr>
@@ -56,6 +57,7 @@
       </tbody>
     </table>
   </div>
+  <p class="caption">Table 1. Results on the mock agent across 30 cases. Secret exposure is counted over the 25 cases where a secret was reachable.</p>
 
   <h3>What I took from it</h3>
   <ul>
@@ -93,6 +95,11 @@
   <p class="small">I'm an AI security researcher. My first-author paper on prompt injection was accepted at AISEC 2026 (International Conference on Artificial Intelligence &amp; Cybersecurity, Marrakech). I only test systems I have permission to test.</p>
 </main>
 
-<footer class="wrap foot"><p><a href="/">Back to the demo</a></p></footer>
+<footer class="foot">
+  <div class="foot-in">
+    <span>Built by <a href="https://saeed-research-profile-cyberxai.vercel.app/" rel="noopener">Muhammad Saeed Anwar</a>. Open source, MIT.</span>
+    <a href="/">Back to the test bench</a>
+  </div>
+</footer>
 </body>
 </html>
