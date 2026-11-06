@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AgentShield Case Study</title>
 <meta name="description" content="How I test tool-using AI agents for prompt injection, and what the results show about common defenses.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -23,20 +21,14 @@
 
 <main class="wrap doc">
   <section class="hero hero-flush">
-    <p class="eyebrow">Case study</p>
     <h1>Testing AI agents for prompt injection</h1>
     <p class="lead">AgentShield is an open-source test harness I wrote. It checks whether an AI agent with tools (email, files, a database) can be tricked by text it reads, and which defenses stop that.</p>
   </section>
 
-  <div class="kpis">
-    <div class="kpi"><b>9 of 30</b><span>attacks succeeded with no defenses</span></div>
-    <div class="kpi"><b>0 of 30</b><span>succeeded with all five defenses on</span></div>
-    <div class="kpi"><b>30 of 30</b><span>normal tasks still completed with defenses on</span></div>
-  </div>
 
   <h2>Why I built it</h2>
   <p>More products now give a language model access to tools. If the model reads a web page, an email or a document that contains hidden instructions, it may follow them. That can mean sending customer data to an outside address or reading files it should not touch.</p>
-  <p>I wanted a small, repeatable way to measure how often that happens and which defense actually prevents it, instead of relying on one-off demos.</p>
+  <p>I wanted a small, repeatable way to measure how often that happens and which defense prevents it, instead of relying on one-off demos.</p>
 
   <h2>How it works</h2>
   <ul>
@@ -49,7 +41,7 @@
   </ul>
 
   <h2>Results</h2>
-  <p>These numbers come from the mock agent included in the project. It is deliberately easy to fool, so the numbers describe the defenses and the harness, not any commercial model. You can rerun all of them on the <a href="/">demo page</a>.</p>
+  <p>These numbers come from the mock agent included in the project. It is built to be easy to fool, so the numbers describe the defenses and the harness, not any commercial model. You can rerun all of them on the <a href="/">demo page</a>.</p>
   <div class="table-scroll">
     <table>
       <thead><tr><th>Defenses</th><th>Attacks succeeded</th><th>Secret exposed</th><th>Out-of-policy tool calls</th><th>Normal task done</th></tr></thead>
